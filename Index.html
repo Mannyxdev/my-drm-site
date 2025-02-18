@@ -5,11 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secure PDF Viewer</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Include PDF.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 </head>
 <body>
     <h1>Secure PDF Viewer</h1>
-    <canvas id="pdfCanvas"></canvas>
+    <p id="loginMessage">Please log in to view the PDF.</p>
+    <button id="generateTokenButton">Generate Token</button>
+    <input type="text" id="passwordInput" placeholder="Enter Password" style="display: none;">
+    <button id="loginButton" style="display: none;">Login</button>
+    <canvas id="pdfCanvas" style="display: none;"></canvas>
+
     <script src="script.js"></script>
 </body>
 </html>
