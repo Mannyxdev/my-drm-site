@@ -1,88 +1,99 @@
-// Function to generate a random token
-function generateToken() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let token = '';
-    for (let i = 0; i < 16; i++) {
-        token += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return token;
-}
-
-// Function to hash the token into a password (SHA-256)
-async function generatePassword(token) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(token);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
-    return hashHex.substring(0, 8); // Use first 8 characters as the password
-}
-
-// Function to handle login
-function login(password) {
-    const storedPassword = localStorage.getItem('userPassword');
-    if (!storedPassword) {
-        localStorage.setItem('userPassword', password);
-        alert("Login successful! You are now logged in.");
-        loadPDF();
-    } else if (storedPassword === password) {
-        alert("Welcome back! You are already logged in.");
-        loadPDF();
-    } else {
-        alert("Invalid password. Please try again.");
-    }
-}
-
-// Function to load and render the PDF
-async function loadPDF() {
-    const storedPassword = localStorage.getItem('userPassword');
-    if (!storedPassword) {
-        document.getElementById('loginMessage').textContent = "Please log in to view the PDF.";
-        return;
-    }
-
-    document.getElementById('loginMessage').style.display = 'none';
-    document.getElementById('pdfCanvas').style.display = 'block';
-
-    const pdfUrl = 'pdf/your-pdf-file.pdf'; // Path to your PDF
-    const loadingTask = pdfjsLib.getDocument(pdfUrl);
-
-    try {
-        const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1); // Load the first page
-
-        const scale = 1.5;
-        const viewport = page.getViewport({ scale });
-        const canvas = document.getElementById('pdfCanvas');
-        const context = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        await page.render({ canvasContext: context, viewport }).promise;
-    } catch (error) {
-        console.error("Error loading PDF:", error);
-    }
-}
-
-// Event listeners for token generation and login
-document.getElementById('generateTokenButton').addEventListener('click', () => {
-    const token = generateToken();
-    alert(`Share this token with sales personnel: ${token}`);
-    generatePassword(token).then(password => {
-        alert(`Generated Password: ${password}`);
-        document.getElementById('passwordInput').style.display = 'inline-block';
-        document.getElementById('loginButton').style.display = 'inline-block';
-    });
+// Disable right-click
+document.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+  alert('Right-click is disabled for security reasons.');
 });
 
-document.getElementById('loginButton').addEventListener('click', () => {
-    const password = document.getElementById('passwordInput').value;
-    if (password) {
-        login(password);
-    } else {
-        alert("Please enter a password.");
-    }
+// Disable keyboard shortcuts for inspect element
+document.addEventListener('keydown', (event) => {
+  const forbiddenKeys = ['F12', 'Control+Shift+I', 'Control+Shift+C', 'Control+U'];
+  if (
+    event.key === 'F12' ||
+    (event.ctrlKey && event.shiftKey && event.key === 'I') ||
+    (event.ctrlKey && event.shiftKey && event.key === 'C') ||
+    (event.ctrlKey && event.key === 'U')
+  ) {
+    event.preventDefault();
+    alert('Inspect element is disabled for security reasons.');
+  }
 });
 
-// Disable right-click and download
-document.addEventListener('contextmenu', event => event.preventDefault());
+// PDF.js setup
+const pdfUrl = 'example.pdf'; // Replace with your PDF file path
+let pdfDoc = null;
+let currentPage = 1;
+let scale = 1.5;
+
+const canvas = document.getElementById('pdf-canvas');
+const ctx = canvas.getContext('2d');
+
+// Render a specific page
+async function renderPage(pageNum) {
+  const page = await pdfDoc.getPage(pageNum);
+  const viewport = page.getViewport({ scale });
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  const renderContext = {
+    canvasContext: ctx,
+    viewport: viewport,
+  };
+  await page.render(renderContext);
+
+  document.getElementById('page-num').textContent = pageNum;
+}
+
+// Load the PDF
+pdfjsLib.getDocument(pdfUrl).promise.then((doc) => {
+  pdfDoc = doc;
+  document.getElementById('page-count').textContent = pdfDoc.numPages;
+  renderPage(currentPage);
+});
+
+// Page navigation
+document.getElementById('prev-page').addEventListener('click', () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderPage(currentPage);
+  }
+});
+
+document.getElementById('next-page').addEventListener('click', () => {
+  if (currentPage < pdfDoc.numPages) {
+    currentPage++;
+    renderPage(currentPage);
+  }
+});
+
+// Zoom functionality
+document.getElementById('zoom-in').addEventListener('click', () => {
+  scale += 0.25;
+  renderPage(currentPage);
+});
+
+document.getElementById('zoom-out').addEventListener('click', () => {
+  if (scale > 0.5) {
+    scale -= 0.25;
+    renderPage(currentPage);
+  }
+});
+
+// Search functionality
+document.getElementById('search-btn').addEventListener('click', async () => {
+  const searchTerm = document.getElementById('search-input').value.trim();
+  if (!searchTerm) {
+    alert('Please enter a search term.');
+    return;
+  }
+
+  const page = await pdfDoc.getPage(currentPage);
+  const textContent = await page.getTextContent();
+  const items = textContent.items.map((item) => item.str);
+  const matches = items.filter((text) => text.includes(searchTerm));
+
+  if (matches.length > 0) {
+    alert(`Found "${searchTerm}" on this page.`);
+  } else {
+    alert(`"${searchTerm}" not found on this page.`);
+  }
+});
