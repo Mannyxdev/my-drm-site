@@ -1,4 +1,3 @@
-javascript
 import { PDFViewer } from './pdf-viewer.js';
 import { setupGestures } from './gestures.js';
 import { setupSearch } from './search.js';
