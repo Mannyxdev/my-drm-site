@@ -19,7 +19,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 // PDF.js setup
-const pdfUrl = 'example.pdf'; // Replace with your PDF file path
+const pdfUrl = 'pdf/your-pdf-file.pdf'; // Replace with your PDF file path
 let pdfDoc = null;
 let currentPage = 1;
 let scale = 1.5;
