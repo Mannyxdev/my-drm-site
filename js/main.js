@@ -1,61 +1,117 @@
 import { PDFViewer } from './pdf-viewer.js';
-import { setupGestures } from './gestures.js';
-import { setupSearch } from './search.js';
-import './security.js';
+import { GestureHandler } from './gestures.js';
+import { SearchHandler } from './search.js';
+import { SecurityHandler } from './security.js';
 
-let pdfViewer;
+const pdfUrl = 'https://drive.google.com/uc?export=view&id=1z9tek-p_Q20Dbax4q6GyYtpBa4zWyZ6y';
 
-document.addEventListener('DOMContentLoaded', async () => {
-    pdfViewer = new PDFViewer({
-        container: document.getElementById('pdf-viewer'),
-        loadingScreen: document.getElementById('loading-screen'),
-        currentPageInput: document.getElementById('current-page'),
-        pageCountSpan: document.getElementById('page-count'),
-        zoomSelect: document.getElementById('zoom-level')
-    });
+let pdfDoc = null;
+let pageNum = 1;
+let pageRendering = false;
+let pageNumPending = null;
+let scale = 1;
+let canvas = document.getElementById('pdf-render');
+let ctx = canvas.getContext('2d');
 
-    // Initialize PDF viewer
-    try {
-        await pdfViewer.loadDocument('/pdfs/your-pdf-files-here.pdf');
-    } catch (error) {
-        console.error('Error loading PDF:', error);
-        alert('Error loading PDF document');
+// Initialize PDF
+pdfjsLib.getDocument({
+    url: pdfUrl,
+    httpHeaders: {
+        'Access-Control-Allow-Origin': '*'
     }
-
-    // Setup event listeners
-    setupControlButtons();
-    setupDarkMode();
-    setupGestures(pdfViewer);
-    setupSearch(pdfViewer);
+}).promise.then(function(pdfDoc_) {
+    pdfDoc = pdfDoc_;
+    document.getElementById('page-count').textContent = pdfDoc.numPages;
+    renderPage(pageNum);
 });
 
-function setupControlButtons() {
-    document.getElementById('previous-page').addEventListener('click', () => {
-        pdfViewer.previousPage();
+function renderPage(num) {
+    pageRendering = true;
+    pdfDoc.getPage(num).then(function(page) {
+        let viewport = page.getViewport({scale: scale});
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        let renderContext = {
+            canvasContext: ctx,
+            viewport: viewport
+        };
+        let renderTask = page.render(renderContext);
+
+        renderTask.promise.then(function() {
+            pageRendering = false;
+            if (pageNumPending !== null) {
+                renderPage(pageNumPending);
+                pageNumPending = null;
+            }
+        });
     });
 
-    document.getElementById('next-page').addEventListener('click', () => {
-        pdfViewer.nextPage();
-    });
-
-    document.getElementById('zoom-in').addEventListener('click', () => {
-        pdfViewer.zoomIn();
-    });
-
-    document.getElementById('zoom-out').addEventListener('click', () => {
-        pdfViewer.zoomOut();
-    });
+    document.getElementById('page-num').textContent = num;
 }
 
-function setupDarkMode() {
-    const darkModeButton = document.getElementById('toggle-dark-mode');
-    darkModeButton.addEventListener('click', () => {
-        document.body.classList.toggle('dark-mode');
-        const isDarkMode = document.body.classList.contains('dark-mode');
-        localStorage.setItem('darkMode', isDarkMode);
-    });
-  // Restore dark mode preference
-    if (localStorage.getItem('darkMode') === 'true') {
-        document.body.classList.add('dark-mode');
+function queueRenderPage(num) {
+    if (pageRendering) {
+        pageNumPending = num;
+    } else {
+        renderPage(num);
     }
 }
+
+function onPrevPage() {
+    if (pageNum <= 1) {
+        return;
+    }
+    pageNum--;
+    queueRenderPage(pageNum);
+}
+
+function onNextPage() {
+    if (pageNum >= pdfDoc.numPages) {
+        return;
+    }
+    pageNum++;
+    queueRenderPage(pageNum);
+}
+
+document.getElementById('prev').addEventListener('click', onPrevPage);
+document.getElementById('next').addEventListener('click', onNextPage);
+
+// Zoom controls
+document.getElementById('zoomIn').addEventListener('click', function() {
+    scale *= 1.2;
+    renderPage(pageNum);
+});
+
+document.getElementById('zoomOut').addEventListener('click', function() {
+    scale *= 0.8;
+    renderPage(pageNum);
+});
+
+// Reset zoom
+document.getElementById('zoomReset').addEventListener('click', function() {
+    scale = 1;
+    renderPage(pageNum);
+});
+
+// Dark mode toggle
+const darkModeToggle = document.getElementById('darkMode');
+darkModeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+});
+
+// Fullscreen toggle
+const fullscreenToggle = document.getElementById('fullscreen');
+fullscreenToggle.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+    } else {
+        document.exitFullscreen();
+    }
+});
+
+// Initialize handlers
+const viewer = new PDFViewer();
+const gestureHandler = new GestureHandler();
+const searchHandler = new SearchHandler();
+const securityHandler = new SecurityHandler();
