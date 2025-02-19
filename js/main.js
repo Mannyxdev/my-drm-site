@@ -1,7 +1,8 @@
 // main.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;
 
-const pdfUrl = 'pdfs/your-pdf-files.here.pdf'; // Your PDF path
+// Update this to match the PDF location in your directory structure
+const pdfUrl = 'your-pdf-files-here.pdf';  // Ensure this matches the filename exactly
 
 let pdfDoc = null;
 let pageNum = 1;
@@ -11,34 +12,26 @@ let scale = 1;
 let canvas = document.getElementById('pdf-render');
 let ctx = canvas.getContext('2d');
 
-console.log('Starting PDF load...');
-
 // Load the PDF
-const loadingTask = pdfjsLib.getDocument(pdfUrl);
-
-loadingTask.onProgress = function(progress) {
-    console.log(`Loading: ${progress.loaded}/${progress.total}`);
-};
-
-loadingTask.promise
+pdfjsLib.getDocument(pdfUrl)
+    .promise
     .then(function(pdf) {
-        console.log('PDF loaded successfully');
         pdfDoc = pdf;
         document.getElementById('page-count').textContent = pdf.numPages;
-        return renderPage(pageNum);
+        renderPage(pageNum);
     })
     .catch(function(error) {
         console.error('Error loading PDF:', error);
-        document.getElementById('pdf-render').insertAdjacentHTML('beforebegin', 
-            `<div style="color: red;">Error loading PDF: ${error.message}</div>`);
+        const errorMessage = document.createElement('div');
+        errorMessage.style.color = 'red';
+        errorMessage.style.padding = '20px';
+        errorMessage.textContent = 'Error loading PDF. Please ensure the PDF file exists and is accessible.';
+        canvas.parentNode.insertBefore(errorMessage, canvas);
     });
 
 function renderPage(num) {
-    console.log(`Rendering page ${num}`);
     pageRendering = true;
-
-    return pdfDoc.getPage(num).then(function(page) {
-        console.log(`Got page ${num}`);
+    pdfDoc.getPage(num).then(function(page) {
         let viewport = page.getViewport({scale: scale});
         canvas.height = viewport.height;
         canvas.width = viewport.width;
@@ -48,20 +41,15 @@ function renderPage(num) {
             viewport: viewport
         };
 
-        return page.render(renderContext).promise.then(function() {
-            console.log(`Page ${num} rendered successfully`);
+        page.render(renderContext).promise.then(function() {
             pageRendering = false;
             if (pageNumPending !== null) {
                 renderPage(pageNumPending);
                 pageNumPending = null;
             }
-        }).catch(function(error) {
-            console.error(`Error rendering page ${num}:`, error);
-            pageRendering = false;
         });
-    }).catch(function(error) {
-        console.error(`Error getting page ${num}:`, error);
-        pageRendering = false;
+
+        document.getElementById('page-num').textContent = num;
     });
 }
 
