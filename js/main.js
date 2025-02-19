@@ -1,12 +1,7 @@
-import { PDFViewer } from './pdf-viewer.js';
-import { GestureHandler } from './gestures.js';
-import { SearchHandler } from './search.js';
-import { SecurityHandler } from './security.js';
+// main.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;
 
-// Set worker source path
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-
-const pdfUrl = 'pdfs/your-pdf-files-here.pdf'; // Update this to your PDF path
+const pdfUrl = 'pdfs/your-pdf-files.here.pdf'; // Your PDF path
 
 let pdfDoc = null;
 let pageNum = 1;
@@ -16,20 +11,34 @@ let scale = 1;
 let canvas = document.getElementById('pdf-render');
 let ctx = canvas.getContext('2d');
 
+console.log('Starting PDF load...');
+
 // Load the PDF
-pdfjsLib.getDocument(pdfUrl).promise
+const loadingTask = pdfjsLib.getDocument(pdfUrl);
+
+loadingTask.onProgress = function(progress) {
+    console.log(`Loading: ${progress.loaded}/${progress.total}`);
+};
+
+loadingTask.promise
     .then(function(pdf) {
+        console.log('PDF loaded successfully');
         pdfDoc = pdf;
         document.getElementById('page-count').textContent = pdf.numPages;
-        renderPage(pageNum);
+        return renderPage(pageNum);
     })
     .catch(function(error) {
         console.error('Error loading PDF:', error);
+        document.getElementById('pdf-render').insertAdjacentHTML('beforebegin', 
+            `<div style="color: red;">Error loading PDF: ${error.message}</div>`);
     });
 
 function renderPage(num) {
+    console.log(`Rendering page ${num}`);
     pageRendering = true;
-    pdfDoc.getPage(num).then(function(page) {
+
+    return pdfDoc.getPage(num).then(function(page) {
+        console.log(`Got page ${num}`);
         let viewport = page.getViewport({scale: scale});
         canvas.height = viewport.height;
         canvas.width = viewport.width;
@@ -39,16 +48,21 @@ function renderPage(num) {
             viewport: viewport
         };
 
-        page.render(renderContext).promise.then(function() {
+        return page.render(renderContext).promise.then(function() {
+            console.log(`Page ${num} rendered successfully`);
             pageRendering = false;
             if (pageNumPending !== null) {
                 renderPage(pageNumPending);
                 pageNumPending = null;
             }
+        }).catch(function(error) {
+            console.error(`Error rendering page ${num}:`, error);
+            pageRendering = false;
         });
+    }).catch(function(error) {
+        console.error(`Error getting page ${num}:`, error);
+        pageRendering = false;
     });
-
-    document.getElementById('page-num').textContent = num;
 }
 
 function queueRenderPage(num) {
@@ -106,8 +120,3 @@ fullscreenToggle.addEventListener('click', () => {
         document.exitFullscreen();
     }
 });
-
-const viewer = new PDFViewer();
-const gestureHandler = new GestureHandler();
-const searchHandler = new SearchHandler();
-const securityHandler = new SecurityHandler();
