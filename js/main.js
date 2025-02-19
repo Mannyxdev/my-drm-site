@@ -3,7 +3,10 @@ import { GestureHandler } from './gestures.js';
 import { SearchHandler } from './search.js';
 import { SecurityHandler } from './security.js';
 
-const pdfUrl = 'https://drive.google.com/uc?export=view&id=1z9tek-p_Q20Dbax4q6GyYtpBa4zWyZ6y';
+// Set worker source path
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+const pdfUrl = 'pdfs/your-pdf-files-here.pdf'; // Update this to your PDF path
 
 let pdfDoc = null;
 let pageNum = 1;
@@ -13,17 +16,16 @@ let scale = 1;
 let canvas = document.getElementById('pdf-render');
 let ctx = canvas.getContext('2d');
 
-// Initialize PDF
-pdfjsLib.getDocument({
-    url: pdfUrl,
-    httpHeaders: {
-        'Access-Control-Allow-Origin': '*'
-    }
-}).promise.then(function(pdfDoc_) {
-    pdfDoc = pdfDoc_;
-    document.getElementById('page-count').textContent = pdfDoc.numPages;
-    renderPage(pageNum);
-});
+// Load the PDF
+pdfjsLib.getDocument(pdfUrl).promise
+    .then(function(pdf) {
+        pdfDoc = pdf;
+        document.getElementById('page-count').textContent = pdf.numPages;
+        renderPage(pageNum);
+    })
+    .catch(function(error) {
+        console.error('Error loading PDF:', error);
+    });
 
 function renderPage(num) {
     pageRendering = true;
@@ -36,9 +38,8 @@ function renderPage(num) {
             canvasContext: ctx,
             viewport: viewport
         };
-        let renderTask = page.render(renderContext);
 
-        renderTask.promise.then(function() {
+        page.render(renderContext).promise.then(function() {
             pageRendering = false;
             if (pageNumPending !== null) {
                 renderPage(pageNumPending);
@@ -77,7 +78,6 @@ function onNextPage() {
 document.getElementById('prev').addEventListener('click', onPrevPage);
 document.getElementById('next').addEventListener('click', onNextPage);
 
-// Zoom controls
 document.getElementById('zoomIn').addEventListener('click', function() {
     scale *= 1.2;
     renderPage(pageNum);
@@ -88,19 +88,16 @@ document.getElementById('zoomOut').addEventListener('click', function() {
     renderPage(pageNum);
 });
 
-// Reset zoom
 document.getElementById('zoomReset').addEventListener('click', function() {
     scale = 1;
     renderPage(pageNum);
 });
 
-// Dark mode toggle
 const darkModeToggle = document.getElementById('darkMode');
 darkModeToggle.addEventListener('click', () => {
     document.body.classList.toggle('dark-mode');
 });
 
-// Fullscreen toggle
 const fullscreenToggle = document.getElementById('fullscreen');
 fullscreenToggle.addEventListener('click', () => {
     if (!document.fullscreenElement) {
@@ -110,7 +107,6 @@ fullscreenToggle.addEventListener('click', () => {
     }
 });
 
-// Initialize handlers
 const viewer = new PDFViewer();
 const gestureHandler = new GestureHandler();
 const searchHandler = new SearchHandler();
