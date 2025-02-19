@@ -1,8 +1,8 @@
 // main.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;
 
-// Update this to match the PDF location in your directory structure
-const pdfUrl = 'your-pdf-files-here.pdf';  // Ensure this matches the filename exactly
+// Path to your PDF file
+const pdfUrl = 'pdfs/your-pdf-files-here.pdf';
 
 let pdfDoc = null;
 let pageNum = 1;
@@ -12,22 +12,30 @@ let scale = 1;
 let canvas = document.getElementById('pdf-render');
 let ctx = canvas.getContext('2d');
 
-// Load the PDF
-pdfjsLib.getDocument(pdfUrl)
-    .promise
-    .then(function(pdf) {
-        pdfDoc = pdf;
-        document.getElementById('page-count').textContent = pdf.numPages;
-        renderPage(pageNum);
+// Fetch the PDF file and convert it to a blob URL
+fetch(pdfUrl)
+    .then(response => response.blob())
+    .then(blob => {
+        const url = URL.createObjectURL(blob);
+
+        // Load the PDF from the blob URL
+        pdfjsLib.getDocument(url)
+            .promise
+            .then(function(pdf) {
+                pdfDoc = pdf;
+                document.getElementById('page-count').textContent = pdf.numPages;
+                renderPage(pageNum);
+            })
+            .catch(function(error) {
+                console.error('Error loading PDF:', error);
+                const errorMessage = document.createElement('div');
+                errorMessage.style.color = 'red';
+                errorMessage.style.padding = '20px';
+                errorMessage.textContent = 'Error loading PDF. Please ensure the PDF file exists and is accessible.';
+                canvas.parentNode.insertBefore(errorMessage, canvas);
+            });
     })
-    .catch(function(error) {
-        console.error('Error loading PDF:', error);
-        const errorMessage = document.createElement('div');
-        errorMessage.style.color = 'red';
-        errorMessage.style.padding = '20px';
-        errorMessage.textContent = 'Error loading PDF. Please ensure the PDF file exists and is accessible.';
-        canvas.parentNode.insertBefore(errorMessage, canvas);
-    });
+    .catch(error => console.error('Error fetching PDF:', error));
 
 function renderPage(num) {
     pageRendering = true;
