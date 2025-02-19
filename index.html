@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced PDF Viewer</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dark-mode.css">
+    <script src="lib/pdf.js"></script>
+</head>
+<body>
+    <div class="toolbar">
+        <div class="left-controls">
+            <button id="previous-page">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="page-info">
+                <input type="number" id="current-page" value="1" min="1">
+                <span>of</span>
+                <span id="page-count">0</span>
+            </div>
+            <button id="next-page">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        
+        <div class="center-controls">
+            <div class="zoom-controls">
+                <button id="zoom-out">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <select id="zoom-level">
+                    <option value="0.5">50%</option>
+                    <option value="0.75">75%</option>
+                    <option value="1" selected>100%</option>
+                    <option value="1.25">125%</option>
+                    <option value="1.5">150%</option>
+                    <option value="2">200%</option>
+                </select>
+                <button id="zoom-in">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="right-controls">
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Search PDF...">
+                <button id="search-previous">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+                <button id="search-next">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+            </div>
+            <button id="toggle-dark-mode">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="pdf-container">
+        <canvas id="pdf-viewer"></canvas>
+    </div>
+
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <p>Loading PDF...</p>
+    </div>
+
+    <script src="js/main.js" type="module"></script>
+    <script src="js/pdf-viewer.js" type="module"></script>
+    <script src="js/gestures.js" type="module"></script>
+    <script src="js/search.js" type="module"></script>
+    <script src="js/security.js" type="module"></script>
+</body>
+</html>
